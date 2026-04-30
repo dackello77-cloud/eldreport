@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ELD Report</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #0f172a;
+  color: white;
+  padding: 10px;
+}
+
+h2 {
+  text-align: center;
+}
+
+.card {
+  background: #1e293b;
+  padding: 14px;
+  border-radius: 14px;
+  margin-bottom: 12px;
+}
+
+.company {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+/* GRID 3 BOXA */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  font-size: 30px
+}
+
+.box {
+  background: #0f172a;
+  padding: 10px;
+  border-radius: 10px;
+  text-align: center;
+}
+  strong.bigbox{
+    font-size: 40px;
+  }
+.box span {
+  display: block;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.box strong {
+  font-size: 16px;
+}
+
+/* TOTAL */
+.total {
+  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+}
+
+.total .company {
+  font-size: 20px;
+}
+
+.total .box strong {
+  font-size: 0px;
+}
+
+
+/* COLORS */
+.positive { color: #22c55e; }
+.negative { color: #ef4444; }
+
+/* MOBILE */
+@media (max-width: 430px) {
+  .box strong {
+    font-size: 15px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<h2>ELD Report</h2>
+<div id="app">Loading...</div>
+
+<script>
+async function loadData() {
+
+  // UZIMA JSON IZ FAJLA
+  const json = await fetch("./eldreport.json").then(r => r.json());
+
+  const companies = json.data.companies;
+  const app = document.getElementById("app");
+  app.innerHTML = "";
+
+  function getFirstDate(dates) {
+    return Object.keys(dates).sort()[0];
+  }
+
+  function getLastValidDate(dates) {
+    const sorted = Object.keys(dates).sort().reverse();
+    for (let d of sorted) {
+      if (dates[d].eld_count > 0) return d;
+    }
+    return sorted[0];
+  }
+
+  let totalStart = 0;
+  let totalCurrent = 0;
+
+  Object.values(companies).forEach(company => {
+
+    const dates = company.dates;
+
+    const firstDate = getFirstDate(dates);
+    const lastDate = getLastValidDate(dates);
+
+    const start = dates[firstDate]?.eld_count || 0;
+    const current = dates[lastDate]?.eld_count || 0;
+
+    totalStart += start;
+    totalCurrent += current;
+
+    const diff = current - start;
+    const percent = start === 0 ? 0 : ((diff / start) * 100).toFixed(1);
+
+    const card = document.createElement("div");
+    card.className = "card";
+
+    card.innerHTML = `
+  <div class="company">${company.name}</div>
+
+  <div class="stats">
+    <div class="box">
+      <span>Start</span>
+      <strong>${start}</strong>
+    </div>
+
+    <div class="box">
+      <span>Now</span>
+      <strong>${current}</strong>
+    </div>
+
+    <div class="box">
+      <span>Change</span>
+      <strong class="${diff >= 0 ? 'positive' : 'negative'}">
+        ${diff >= 0 ? '+' : ''}${percent}%
+      </strong>
+    </div>
+  </div>
+`;
+
+    app.appendChild(card);
+  });
+
+  // TOTAL
+  const totalDiff = totalCurrent - totalStart;
+  const totalPercent = totalStart === 0 ? 0 : ((totalDiff / totalStart) * 100).toFixed(1);
+
+  const total = document.createElement("div");
+  total.className = "card total";
+
+  total.innerHTML = `
+    <h3>TOTAL</h3>
+    <div class="stats">
+      <div>Start: ${totalStart}</div>
+      <div>Now: ${totalCurrent}</div>
+      <div>${totalPercent}%</div>
+    </div>
+  `;
+
+  app.prepend(total);
+}
+
+loadData();
+</script>
+
+</body>
+</html>
