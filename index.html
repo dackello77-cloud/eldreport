@@ -3,182 +3,375 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ELD Report</title>
+<title>Daily ELD Reports</title>
 
 <style>
-body {
-  font-family: Arial, sans-serif;
-  background: #0f172a;
-  color: white;
-  padding: 10px;
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#0f172a;
+  color:white;
 }
 
-h2 {
-  text-align: center;
+.header{
+  min-height:100vh;
+  padding:22px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
 }
 
-.card {
-  background: #1e293b;
-  padding: 14px;
-  border-radius: 14px;
-  margin-bottom: 12px;
+h1{
+  font-size:34px;
+  margin:0 0 8px;
 }
 
-.company {
-  font-size: 16px;
-  font-weight: bold;
-  margin-bottom: 10px;
+.subtitle{
+  color:#94a3b8;
+  margin-bottom:25px;
 }
 
-/* GRID 3 BOXA */
-.stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-  font-size: 30px
+.stats{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:16px;
+  width:100%;
+  max-width:900px;
 }
 
-.box {
-  background: #0f172a;
-  padding: 10px;
-  border-radius: 10px;
-  text-align: center;
-}
-  strong.bigbox{
-    font-size: 40px;
-  }
-.box span {
-  display: block;
-  font-size: 12px;
-  opacity: 0.7;
+.stat{
+  background:#1e293b;
+  border:1px solid #334155;
+  border-radius:18px;
+  padding:22px;
+  text-align:center;
 }
 
-.box strong {
-  font-size: 16px;
+.stat-title{
+  color:#94a3b8;
+  font-size:14px;
 }
 
-/* TOTAL */
-.total {
-  background: linear-gradient(135deg, #1d4ed8, #2563eb);
+.stat-value{
+  font-size:38px;
+  font-weight:bold;
+  margin-top:10px;
 }
 
-.total .company {
-  font-size: 20px;
+.positive{color:#22c55e}
+.negative{color:#ef4444}
+.neutral{color:#facc15}
+
+.btn{
+  margin-top:25px;
+  background:#22c55e;
+  color:#052e16;
+  border:none;
+  padding:13px 22px;
+  border-radius:12px;
+  font-weight:bold;
+  cursor:pointer;
 }
 
-.total .box strong {
-  font-size: 0px;
+.section{
+  padding:20px;
 }
 
-
-/* COLORS */
-.positive { color: #22c55e; }
-.negative { color: #ef4444; }
-
-/* MOBILE */
-@media (max-width: 430px) {
-  .box strong {
-    font-size: 15px;
-  }
+.company-card{
+  background:#1e293b;
+  border:1px solid #334155;
+  border-radius:16px;
+  padding:16px;
+  margin-bottom:12px;
+  cursor:pointer;
 }
+
+.company-name{
+  color:#facc15;
+  font-weight:bold;
+  font-size:18px;
+  margin-bottom:12px;
+}
+
+.company-stats{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+}
+
+.box{
+  background:#0f172a;
+  border-radius:12px;
+  padding:12px;
+  text-align:center;
+}
+
+.box span{
+  display:block;
+  color:#94a3b8;
+  font-size:12px;
+}
+
+.box b{
+  font-size:20px;
+}
+
+.modal{
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.75);
+  justify-content:center;
+  align-items:center;
+  padding:15px;
+}
+
+.modal-content{
+  background:#1e293b;
+  width:100%;
+  max-width:520px;
+  border-radius:18px;
+  padding:20px;
+}
+
+textarea{
+  width:100%;
+  height:180px;
+  background:#0f172a;
+  color:white;
+  border:1px solid #334155;
+  border-radius:12px;
+  padding:12px;
+  resize:none;
+}
+
+.actions{
+  display:flex;
+  gap:10px;
+  margin-top:12px;
+}
+
+.actions button{
+  flex:1;
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.save{background:#22c55e;color:#052e16}
+.close{background:#64748b;color:white}
 </style>
 </head>
 
 <body>
 
-<h2>ELD Report</h2>
-<div id="app">Loading...</div>
-
-<script>
-async function loadData() {
-
-  // UZIMA JSON IZ FAJLA
-  const json = await fetch("./eldreport.json").then(r => r.json());
-
-  const companies = json.data.companies;
-  const app = document.getElementById("app");
-  app.innerHTML = "";
-
-  function getFirstDate(dates) {
-    return Object.keys(dates).sort()[0];
-  }
-
-  function getLastValidDate(dates) {
-    const sorted = Object.keys(dates).sort().reverse();
-    for (let d of sorted) {
-      if (dates[d].eld_count > 0) return d;
-    }
-    return sorted[0];
-  }
-
-  let totalStart = 0;
-  let totalCurrent = 0;
-
-  Object.values(companies).forEach(company => {
-
-    const dates = company.dates;
-
-    const firstDate = getFirstDate(dates);
-    const lastDate = getLastValidDate(dates);
-
-    const start = dates[firstDate]?.eld_count || 0;
-    const current = dates[lastDate]?.eld_count || 0;
-
-    totalStart += start;
-    totalCurrent += current;
-
-    const diff = current - start;
-    const percent = start === 0 ? 0 : ((diff / start) * 100).toFixed(1);
-
-    const card = document.createElement("div");
-    card.className = "card";
-
-    card.innerHTML = `
-  <div class="company">${company.name}</div>
+<div class="header">
+  <h1>Daily ELD Reports</h1>
+  <div class="subtitle">M&M Tracking LLC</div>
 
   <div class="stats">
-    <div class="box">
-      <span>Start</span>
-      <strong>${start}</strong>
+    <div class="stat">
+      <div class="stat-title">Total at Month Start</div>
+      <div id="startTotal" class="stat-value">0</div>
     </div>
 
-    <div class="box">
-      <span>Now</span>
-      <strong>${current}</strong>
+    <div class="stat">
+      <div class="stat-title">Total Today</div>
+      <div id="todayTotal" class="stat-value">0</div>
     </div>
 
-    <div class="box">
-      <span>Change</span>
-      <strong class="${diff >= 0 ? 'positive' : 'negative'}">
-        ${diff >= 0 ? '+' : ''}${percent}%
-      </strong>
+    <div class="stat">
+      <div class="stat-title">Change</div>
+      <div id="changePercent" class="stat-value neutral">0%</div>
     </div>
   </div>
-`;
 
-    app.appendChild(card);
-  });
+  <button class="btn" onclick="loadData()">Refresh Data</button>
+</div>
 
-  // TOTAL
-  const totalDiff = totalCurrent - totalStart;
-  const totalPercent = totalStart === 0 ? 0 : ((totalDiff / totalStart) * 100).toFixed(1);
+<div class="section">
+  <div id="companies"></div>
+</div>
 
-  const total = document.createElement("div");
-  total.className = "card total";
+<div id="noteModal" class="modal">
+  <div class="modal-content">
+    <h2 id="modalTitle">Company Notes</h2>
+    5522<textarea id="noteText" placeholder="Write note here..."></textarea>
 
-  total.innerHTML = `
-    <h3>TOTAL</h3>
-    <div class="stats">
-      <div>Start: ${totalStart}</div>
-      <div>Now: ${totalCurrent}</div>
-      <div>${totalPercent}%</div>
+    <div class="actions">
+      <button class="save" onclick="saveNote()">Save Note</button>
+      <button class="close" onclick="closeModal()">Close</button>
     </div>
-  `;
+  </div>
+</div>
 
-  app.prepend(total);
+<script>
+
+const API_URL = "https://royal-paper-656b.dackello77.workers.dev";
+const NOTES_API = "https://script.google.com/macros/s/AKfycbynf1lSFfIufxi2DZMdXplNWiBktNfTTmr9dBOMEp0NtWV8tgcgUy-hpXxyCqqBVxh2/exec";
+
+let currentCompany = "";
+window.notes = {};
+
+// ================= NOTES =================
+
+async function loadNotes() {
+  const res = await fetch(NOTES_API);
+  window.notes = await res.json();
 }
 
-loadData();
+// ================= LOAD DATA =================
+
+async function loadData(){
+  const res = await fetch(API_URL);
+  const data = await res.json();
+
+  const companiesObj = data.data?.companies || {};
+  const companies = Object.values(companiesObj);
+
+  renderDashboard(companies);
+  renderCompanies(companies);
+}
+
+// ================= HELPERS =================
+
+function getMonthStartCount(company){
+  const dates = Object.keys(company.dates || {}).sort();
+  if(!dates.length) return 0;
+  return company.dates[dates[0]].eld_count || 0;
+}
+
+function getTodayCount(company){
+  const today = new Date().toISOString().slice(0,10);
+
+  if (company.dates && company.dates[today]) {
+    return company.dates[today].eld_count || 0;
+  }
+
+  return 0;
+}
+
+function percentChange(start, today){
+  if(start === 0 && today === 0) return 0;
+  if(start === 0) return 100;
+  return ((today - start) / start * 100).toFixed(1);
+}
+
+// ================= DASHBOARD =================
+
+function renderDashboard(companies){
+  let startTotal = 0;
+  let todayTotal = 0;
+
+  companies.forEach(c => {
+    startTotal += getMonthStartCount(c);
+    todayTotal += getTodayCount(c);
+  });
+
+  const percent = percentChange(startTotal, todayTotal);
+
+  document.getElementById("startTotal").textContent = startTotal;
+  document.getElementById("todayTotal").textContent = todayTotal;
+
+  const changeEl = document.getElementById("changePercent");
+  changeEl.textContent = percent + "%";
+
+  changeEl.className = "stat-value " + (
+    percent > 0 ? "positive" : percent < 0 ? "negative" : "neutral"
+  );
+}
+
+// ================= COMPANIES =================
+
+function renderCompanies(companies){
+  const box = document.getElementById("companies");
+  box.innerHTML = "";
+
+  companies.forEach(company => {
+    const start = getMonthStartCount(company);
+    const today = getTodayCount(company);
+    const percent = percentChange(start, today);
+
+    const colorClass = percent > 0 ? "positive" : percent < 0 ? "negative" : "neutral";
+
+    const hasNote = window.notes[company.name];
+
+    const card = document.createElement("div");
+    card.className = "company-card";
+    card.onclick = () => openModal(company.name);
+
+    card.innerHTML = `
+      <div class="company-name">
+        ${company.name} ${hasNote ? "📝" : ""}
+      </div>
+
+      <div class="company-stats">
+        <div class="box">
+          <span>Start</span>
+          <b>${start}</b>
+        </div>
+
+        <div class="box">
+          <span>Today</span>
+          <b>${today}</b>
+        </div>
+
+        <div class="box">
+          <span>Change</span>
+          <b class="${colorClass}">${percent}%</b>
+        </div>
+      </div>
+    `;
+
+    box.appendChild(card);
+  });
+}
+
+// ================= MODAL =================
+
+function openModal(companyName){
+  currentCompany = companyName;
+
+  document.getElementById("modalTitle").textContent = companyName + " - Notes";
+  document.getElementById("noteText").value = window.notes[companyName] || "";
+
+  document.getElementById("noteModal").style.display = "flex";
+}
+
+function closeModal(){
+  document.getElementById("noteModal").style.display = "none";
+}
+
+async function saveNote(){
+  const note = document.getElementById("noteText").value;
+
+  await fetch(NOTES_API, {
+    method: "POST",
+    body: JSON.stringify({
+      company: currentCompany,
+      note: note
+    })
+  });
+
+  window.notes[currentCompany] = note;
+
+  closeModal();
+}
+
+// ================= INIT =================
+
+async function init(){
+  await loadNotes();
+  await loadData();
+}
+
+init();
+
 </script>
 
 </body>
