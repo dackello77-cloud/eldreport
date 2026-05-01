@@ -247,10 +247,28 @@ function getMonthStartCount(company){
 }
 
 function getTodayCount(company){
-  const today = new Date().toISOString().slice(0,10);
+  const now = new Date();
+  const hourUTC = now.getUTCHours();
 
-  if (company.dates && company.dates[today]) {
-    return company.dates[today].eld_count || 0;
+  let targetDate = new Date(now);
+
+  if (hourUTC < 14) {
+    targetDate.setUTCDate(targetDate.getUTCDate() - 1);
+  }
+
+  const dateStr = targetDate.toISOString().slice(0,10);
+
+  if (company.dates && company.dates[dateStr]) {
+    return company.dates[dateStr].eld_count || 0;
+  }
+
+  // fallback → uzmi poslednji koji ima podatak
+  const dates = Object.keys(company.dates || {}).sort().reverse();
+
+  for (let d of dates) {
+    if (company.dates[d].eld_count > 0) {
+      return company.dates[d].eld_count;
+    }
   }
 
   return 0;
