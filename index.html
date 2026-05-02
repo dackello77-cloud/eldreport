@@ -252,7 +252,8 @@ function getTodayCount(company){
 
   let targetDate = new Date(now);
 
-  if (hourUTC < 14) {
+  // 👇 promenjeno na 13 UTC
+  if (hourUTC < 13) {
     targetDate.setUTCDate(targetDate.getUTCDate() - 1);
   }
 
@@ -260,15 +261,6 @@ function getTodayCount(company){
 
   if (company.dates && company.dates[dateStr]) {
     return company.dates[dateStr].eld_count || 0;
-  }
-
-  // fallback → uzmi poslednji koji ima podatak
-  const dates = Object.keys(company.dates || {}).sort().reverse();
-
-  for (let d of dates) {
-    if (company.dates[d].eld_count > 0) {
-      return company.dates[d].eld_count;
-    }
   }
 
   return 0;
