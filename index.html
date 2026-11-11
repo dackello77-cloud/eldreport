@@ -1,388 +1,351 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Daily ELD Reports</title>
-
 <style>
-*{box-sizing:border-box}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  :root{--bg:#0f172a;--card:#1e293b;--line:#334155;--muted:#94a3b8;--text:#f1f5f9;--green:#22c55e;--red:#ef4444;--yellow:#facc15}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;font-size:15px}
+  body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  .wrap{max-width:960px;margin:0 auto;padding:16px 14px 40px}
 
-body{
-  margin:0;
-  font-family:Arial,sans-serif;
-  background:#0f172a;
-  color:white;
-}
+  /* Zaglavlje */
+  .top{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+  h1{font-size:22px;margin:0;flex:1;line-height:1.2}
+  .sub{color:var(--muted);font-size:13px;margin-bottom:8px}
+  .sched{font-size:14px;color:#e2e8f0;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 12px;margin-bottom:10px}
+  .sched b{color:var(--green)}
+  .sched .li{color:var(--muted);font-size:13px;margin-top:4px}
+  .sched .li b{color:#e2e8f0}
+  .refresh{background:var(--green);color:#052e16;border:0;border-radius:12px;padding:10px 14px;font-weight:700;font-size:14px;cursor:pointer;white-space:nowrap}
+  .refresh:disabled{opacity:.6}
+  .status{font-size:13px;padding:10px 12px;border-radius:12px;margin-bottom:14px;line-height:1.4;background:#1e293b;border:1px solid var(--line);color:var(--muted)}
+  .status.wait{border-color:#854d0e;background:#422006;color:#fde68a}
+  .status.ok{border-color:#166534;background:#052e16;color:#bbf7d0}
+  .status.err{border-color:#7f1d1d;background:#450a0a;color:#fecaca}
 
-.header{
-  min-height:100vh;
-  padding:22px;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:center;
-}
+  /* Zbirni podaci */
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+  .stat.today{grid-column:1/-1;border-color:var(--green)}
+  .stat .t{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+  .stat .t small{text-transform:none;letter-spacing:0;margin-left:4px}
+  .stat .v{font-size:32px;font-weight:800;margin:4px 0 2px;font-variant-numeric:tabular-nums}
+  .stat.today .v{font-size:42px}
+  .stat .c{font-size:14px;line-height:1.6}
+  .stat .c span.m{color:var(--muted);font-weight:400}
+  .pos{color:var(--green);font-weight:700}.neg{color:var(--red);font-weight:700}.neu{color:var(--yellow);font-weight:700}
 
-h1{
-  font-size:34px;
-  margin:0 0 8px;
-}
+  /* Kontrole */
+  .tools{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+  .tools input,.tools select{background:var(--card);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:11px 12px;font-size:16px}
+  .tools input{flex:1 1 180px;min-width:0}
+  .tools select{flex:1 1 140px}
+  .count{color:var(--muted);font-size:13px;margin:0 2px 10px}
 
-.subtitle{
-  color:#94a3b8;
-  margin-bottom:25px;
-}
+  /* Kartice firmi */
+  .list{display:grid;grid-template-columns:1fr;gap:10px}
+  @media(min-width:720px){.list{grid-template-columns:1fr 1fr}.stats{grid-template-columns:1fr 1fr 1fr}.stat.today{grid-column:auto}}
+  .co{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;cursor:pointer}
+  .co:active{transform:scale(.99)}
+  .co-head{display:flex;align-items:flex-start;gap:8px;margin-bottom:10px}
+  .co-name{color:var(--yellow);font-weight:700;font-size:16px;flex:1;line-height:1.3;word-break:break-word}
+  .badge{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 8px;white-space:nowrap}
+  .boxes{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .box{background:var(--bg);border-radius:12px;padding:9px 6px;text-align:center}
+  .box span{display:block;color:var(--muted);font-size:11px;margin-bottom:2px}
+  .box b{font-size:20px;font-variant-numeric:tabular-nums}
+  .chg{display:flex;justify-content:space-between;gap:8px;margin-top:10px;font-size:13px}
+  .chg div{flex:1;background:var(--bg);border-radius:10px;padding:7px 8px;text-align:center}
+  .chg .m{color:var(--muted);display:block;font-size:11px}
+  .note{margin-top:8px;font-size:13px;color:#cbd5e1;background:#0f172a;border-left:3px solid var(--yellow);padding:6px 9px;border-radius:6px;white-space:pre-wrap}
 
-.stats{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-  gap:16px;
-  width:100%;
-  max-width:900px;
-}
-
-.stat{
-  background:#1e293b;
-  border:1px solid #334155;
-  border-radius:18px;
-  padding:22px;
-  text-align:center;
-}
-
-.stat-title{
-  color:#94a3b8;
-  font-size:14px;
-}
-
-.stat-value{
-  font-size:38px;
-  font-weight:bold;
-  margin-top:10px;
-}
-
-.positive{color:#22c55e}
-.negative{color:#ef4444}
-.neutral{color:#facc15}
-
-.btn{
-  margin-top:25px;
-  background:#22c55e;
-  color:#052e16;
-  border:none;
-  padding:13px 22px;
-  border-radius:12px;
-  font-weight:bold;
-  cursor:pointer;
-}
-
-.section{
-  padding:20px;
-}
-
-.company-card{
-  background:#1e293b;
-  border:1px solid #334155;
-  border-radius:16px;
-  padding:16px;
-  margin-bottom:12px;
-  cursor:pointer;
-}
-
-.company-name{
-  color:#facc15;
-  font-weight:bold;
-  font-size:18px;
-  margin-bottom:12px;
-}
-
-.company-stats{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:10px;
-}
-
-.box{
-  background:#0f172a;
-  border-radius:12px;
-  padding:12px;
-  text-align:center;
-}
-
-.box span{
-  display:block;
-  color:#94a3b8;
-  font-size:12px;
-}
-
-.box b{
-  font-size:20px;
-}
-
-.modal{
-  display:none;
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.75);
-  justify-content:center;
-  align-items:center;
-  padding:15px;
-}
-
-.modal-content{
-  background:#1e293b;
-  width:100%;
-  max-width:520px;
-  border-radius:18px;
-  padding:20px;
-}
-
-textarea{
-  width:100%;
-  height:180px;
-  background:#0f172a;
-  color:white;
-  border:1px solid #334155;
-  border-radius:12px;
-  padding:12px;
-  resize:none;
-}
-
-.actions{
-  display:flex;
-  gap:10px;
-  margin-top:12px;
-}
-
-.actions button{
-  flex:1;
-  padding:12px;
-  border:none;
-  border-radius:10px;
-  font-weight:bold;
-  cursor:pointer;
-}
-
-.save{background:#22c55e;color:#052e16}
-.close{background:#64748b;color:white}
+  /* Modal za beleške */
+  .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:10;align-items:flex-end;justify-content:center}
+  .modal.open{display:flex}
+  .sheet{background:var(--card);width:100%;max-width:560px;border-radius:20px 20px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+  @media(min-width:600px){.modal{align-items:center}.sheet{border-radius:20px}}
+  .sheet h2{margin:0 0 12px;font-size:18px}
+  textarea{width:100%;height:160px;background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:12px;font-size:16px;resize:vertical}
+  .actions{display:flex;gap:10px;margin-top:12px}
+  .actions button{flex:1;padding:13px;border:0;border-radius:12px;font-weight:700;font-size:15px;cursor:pointer}
+  .save{background:var(--green);color:#052e16}.close{background:#64748b;color:#fff}
+  .empty{color:var(--muted);text-align:center;padding:30px 10px}
 </style>
 </head>
-
 <body>
-
-<div class="header">
-  <h1>Daily ELD Reports</h1>
-  <div class="subtitle">M&M Tracking LLC</div>
-
-  <div class="stats">
-    <div class="stat">
-      <div class="stat-title">Total at Month Start</div>
-      <div id="startTotal" class="stat-value">0</div>
-    </div>
-
-    <div class="stat">
-      <div class="stat-title">Total Today</div>
-      <div id="todayTotal" class="stat-value">0</div>
-    </div>
-
-    <div class="stat">
-      <div class="stat-title">Change</div>
-      <div id="changePercent" class="stat-value neutral">0%</div>
-    </div>
+<div class="wrap">
+  <div class="top">
+    <h1>Daily ELD Reports</h1>
+    <button class="refresh" id="refreshBtn">⟳ Osveži</button>
+  </div>
+  <div class="sub">M&amp;M Tracking LLC</div>
+  <div class="sched">
+    <div>🕑 Ažurira se svakog dana u <b id="srTime">—</b> po srpskom vremenu</div>
+    <div class="li">Poslednje učitavanje: <b id="lastLoad">—</b></div>
+    <div class="li">Sledeće učitavanje: <b id="nextLoad">—</b></div>
   </div>
 
-  <button class="btn" onclick="loadData()">Refresh Data</button>
+  <div class="status" id="status">Učitavanje podataka…</div>
+
+  <div class="stats">
+    <div class="stat"><div class="t">Početak meseca<small id="dStart"></small></div><div class="v" id="tStart">—</div><div class="c" id="cStart"></div></div>
+    <div class="stat"><div class="t">Juče<small id="dPrev"></small></div><div class="v" id="tPrev">—</div><div class="c" id="cPrev"></div></div>
+    <div class="stat today"><div class="t">Danas<small id="dToday"></small></div><div class="v" id="tToday">—</div><div class="c" id="cToday"></div></div>
+  </div>
+
+  <div class="tools">
+    <input id="search" type="search" placeholder="🔍 Pretraga firme…" autocomplete="off">
+    <select id="sort">
+      <option value="name">Sortiraj: naziv</option>
+      <option value="today">Najviše danas</option>
+      <option value="chgPrev">Najveći rast vs juče</option>
+      <option value="chgPrevNeg">Najveći pad vs juče</option>
+      <option value="chgStart">Najveći rast vs početak meseca</option>
+      <option value="chgStartNeg">Najveći pad vs početak meseca</option>
+    </select>
+    <select id="account"><option value="">Svi nalozi</option></select>
+  </div>
+  <div class="count" id="count"></div>
+  <div class="list" id="companies"></div>
 </div>
 
-<div class="section">
-  <div id="companies"></div>
-</div>
-
-<div id="noteModal" class="modal">
-  <div class="modal-content">
-    <h2 id="modalTitle">Company Notes</h2>
-    <textarea id="noteText" placeholder="Write note here..."></textarea>
-
+<div class="modal" id="noteModal">
+  <div class="sheet">
+    <h2 id="modalTitle">Beleška</h2>
+    <textarea id="noteText" placeholder="Upiši belešku…"></textarea>
     <div class="actions">
-      <button class="save" onclick="saveNote()">Save Note</button>
-      <button class="close" onclick="closeModal()">Close</button>
+      <button class="save" id="saveNote">Sačuvaj</button>
+      <button class="close" id="closeModal">Zatvori</button>
     </div>
   </div>
 </div>
 
 <script>
-
-const API_URL = "https://royal-paper-656b.dackello77.workers.dev";
+/* ===================== PODEŠAVANJA ===================== */
+const API_URL   = "https://royal-paper-656b.dackello77.workers.dev";
 const NOTES_API = "https://script.google.com/macros/s/AKfycbynf1lSFfIufxi2DZMdXplNWiBktNfTTmr9dBOMEp0NtWV8tgcgUy-hpXxyCqqBVxh2/exec";
+const UPDATE_UTC  = { h: 14, m: 10 };  // prva provera u 14:10 UTC (= 15:10 po srpskom zimi)
+const REFRESH_MIN = 10;               // zatim na svakih 10 min dok podaci ne stignu
 
-let currentCompany = "";
-window.notes = {};
+/* ===================== POMOĆNE ===================== */
+const $ = id => document.getElementById(id);
+const nf = new Intl.NumberFormat("sr-RS");
+const utcToday = () => new Date().toISOString().slice(0, 10);
+const fmtD = d => d ? ` ${d.slice(8,10)}.${d.slice(5,7)}.` : "";
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pct = (a, b) => (a == null || b == null) ? null : b === 0 ? (a === 0 ? 0 : null) : (a - b) / b * 100;
+const cls = v => v == null || v === 0 ? "neu" : v > 0 ? "pos" : "neg";
+const fmtPct = p => p == null ? "—" : (p > 0 ? "+" : "") + p.toFixed(1).replace(".", ",") + "%";
+const fmtDiff = d => d == null ? "—" : (d > 0 ? "+" : "") + nf.format(d);
+const fmtN = n => n == null ? "—" : nf.format(n);
+// Vreme ažuriranja po srpskom vremenu (sama računa letnje/zimsko računanje vremena)
+const srTime = () => { const n = new Date(); return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate(), UPDATE_UTC.h, UPDATE_UTC.m)).toLocaleTimeString("sr-RS", {hour:"2-digit", minute:"2-digit", timeZone:"Europe/Belgrade"}); };
+const pastUpdateTime = () => { const n = new Date(); return n.getUTCHours() * 60 + n.getUTCMinutes() >= UPDATE_UTC.h * 60 + UPDATE_UTC.m; };
 
-// ================= NOTES =================
+let notes = {}, rows = [], M = null, lastLoad = 0, lastType = "", loading = false;
+const srClock = d => d.toLocaleTimeString("sr-RS", {hour:"2-digit", minute:"2-digit", timeZone:"Europe/Belgrade"});
 
+/* ===================== BELEŠKE ===================== */
 async function loadNotes() {
-  const res = await fetch(NOTES_API);
-  window.notes = await res.json();
+  try { const r = await fetch(NOTES_API); notes = await r.json() || {}; } catch (e) { notes = {}; }
+}
+let currentCompany = "";
+function openModal(name) {
+  currentCompany = name;
+  $("modalTitle").textContent = name;
+  $("noteText").value = notes[name] || "";
+  $("noteModal").classList.add("open");
+}
+function closeModal() { $("noteModal").classList.remove("open"); }
+async function saveNote() {
+  const note = $("noteText").value;
+  $("saveNote").textContent = "Čuvam…";
+  try { await fetch(NOTES_API, { method: "POST", body: JSON.stringify({ company: currentCompany, note }) }); } catch (e) {}
+  notes[currentCompany] = note;
+  $("saveNote").textContent = "Sačuvaj";
+  closeModal(); renderList();
 }
 
-// ================= LOAD DATA =================
-
-async function loadData(){
-  const res = await fetch(API_URL);
-  const data = await res.json();
-
-  const companiesObj = data.data?.companies || {};
-  const companies = Object.values(companiesObj);
-
-  renderDashboard(companies);
-  renderCompanies(companies);
-}
-
-// ================= HELPERS =================
-
-function getMonthStartCount(company){
-  const dates = Object.keys(company.dates || {}).sort();
-  if(!dates.length) return 0;
-  return company.dates[dates[0]].eld_count || 0;
-}
-
-function getTodayCount(company){
-  const now = new Date();
-  const hourUTC = now.getUTCHours();
-
-  let targetDate = new Date(now);
-
-  // 👇 promenjeno na 13 UTC
-  if (hourUTC < 13) {
-    targetDate.setUTCDate(targetDate.getUTCDate() - 1);
+/* ===================== PODACI ===================== */
+async function loadData(force, type) {
+  if (loading) return;
+  loading = true; $("refreshBtn").disabled = true; $("refreshBtn").textContent = "⟳ …";
+  const before = M && M.latest;
+  try {
+    const r = await fetch(API_URL + (force ? (API_URL.includes("?") ? "&" : "?") + "refresh=1" : ""));
+    const data = await r.json();
+    if (!r.ok || data.error) throw new Error(data.error || ("Status " + r.status));
+    M = compute(data);
+    if (before && before !== M.latest) flash(`✅ Stigli su novi podaci za${fmtD(M.latest)}`);
+    renderAll();
+  } catch (e) {
+    setStatus("err", "⚠ Podaci nisu učitani: " + esc(e.message));
   }
-
-  const dateStr = targetDate.toISOString().slice(0,10);
-
-  if (company.dates && company.dates[dateStr]) {
-    return company.dates[dateStr].eld_count || 0;
-  }
-
-  return 0;
+  lastLoad = Date.now(); lastType = type || "automatski"; loading = false;
+  renderLoadInfo();
+  $("refreshBtn").disabled = false; $("refreshBtn").textContent = "⟳ Osveži";
 }
 
-function percentChange(start, today){
-  if(start === 0 && today === 0) return 0;
-  if(start === 0) return 100;
-  return ((today - start) / start * 100).toFixed(1);
-}
+function compute(data) {
+  const today = utcToday();
+  const companies = Object.values(data.data?.companies || {});
+  const all = new Set();
+  companies.forEach(c => Object.keys(c.dates || {}).forEach(d => all.add(d)));
+  Object.keys(data.data?.total_by_day || {}).forEach(d => all.add(d));
+  const tbd = data.data?.total_by_day || {};
+  const val = (c, d) => d && c.dates && c.dates[d] ? (c.dates[d].eld_count ?? null) : null;
+  // Dan se računa samo ako ima podatke (ten-four unapred vraća današnji dan sa nulama dok ne stigne ažuriranje)
+  const dayTotal = d => tbd[d] != null ? Number(tbd[d]) : companies.reduce((a, c) => a + (val(c, d) || 0), 0);
+  const avail = [...all].filter(d => d <= today && dayTotal(d) > 0).sort();
 
-// ================= DASHBOARD =================
+  // "Danas" = najnoviji dan sa podacima (pre ažuriranja to su jučerašnji podaci)
+  const latest = avail[avail.length - 1] || null;
+  const prev = avail.length > 1 ? avail[avail.length - 2] : null;
+  const monthDays = latest ? avail.filter(d => d.slice(0, 7) === latest.slice(0, 7)) : [];
+  const start = monthDays[0] || null;
 
-function renderDashboard(companies){
-  let startTotal = 0;
-  let todayTotal = 0;
-
-  companies.forEach(c => {
-    startTotal += getMonthStartCount(c);
-    todayTotal += getTodayCount(c);
+  rows = companies.map(c => {
+    const s = val(c, start), p = val(c, prev), t = val(c, latest);
+    return {
+      name: String(c.name || "Nepoznata firma").trim(), account: c.account_name || "",
+      start: s, prev: p, today: t,
+      dPrev: t != null && p != null ? t - p : null, pPrev: pct(t, p),
+      dStart: t != null && s != null ? t - s : null, pStart: pct(t, s),
+    };
   });
 
-  const percent = percentChange(startTotal, todayTotal);
-
-  document.getElementById("startTotal").textContent = startTotal;
-  document.getElementById("todayTotal").textContent = todayTotal;
-
-  const changeEl = document.getElementById("changePercent");
-  changeEl.textContent = percent + "%";
-
-  changeEl.className = "stat-value " + (
-    percent > 0 ? "positive" : percent < 0 ? "negative" : "neutral"
-  );
+  const total = d => {
+    if (!d) return null;
+    if (tbd[d] != null) return Number(tbd[d]);
+    const v = companies.map(c => val(c, d)).filter(x => x != null);
+    return v.length ? v.reduce((a, b) => a + b, 0) : null;
+  };
+  return { today, latest, prev, start, tStart: total(start), tPrev: total(prev), tToday: total(latest) };
 }
 
-// ================= COMPANIES =================
+/* ===================== PRIKAZ ===================== */
+function setStatus(type, html) { const s = $("status"); s.className = "status " + type; s.innerHTML = html; }
 
-function renderCompanies(companies){
-  const box = document.getElementById("companies");
-  box.innerHTML = "";
+function renderStatus() {
+  if (!M) return;
+  const t = srTime();
+  if (M.latest === M.today) setStatus("ok", `✅ Današnji podaci su stigli${fmtD(M.today)}. Sledeće ažuriranje sutra u ${t}.`);
+  else if (!pastUpdateTime()) setStatus("wait", `⏳ Prikazani su podaci od${fmtD(M.latest)} Današnji stižu u ${t} po srpskom vremenu.`);
+  else setStatus("wait", `🔄 Čeka se današnje ažuriranje – provera na svakih ${REFRESH_MIN} min dok podaci ne stignu. Do tada: podaci od${fmtD(M.latest)}`);
+}
 
-  companies.forEach(company => {
-    const start = getMonthStartCount(company);
-    const today = getTodayCount(company);
-    const percent = percentChange(start, today);
+function line(a, b, label) {
+  const d = a != null && b != null ? a - b : null, p = pct(a, b);
+  return `<div><span class="${cls(d)}">${fmtDiff(d)} (${fmtPct(p)})</span> <span class="m">${label}</span></div>`;
+}
 
-    const colorClass = percent > 0 ? "positive" : percent < 0 ? "negative" : "neutral";
+function renderSummary() {
+  $("dStart").textContent = fmtD(M.start); $("dPrev").textContent = fmtD(M.prev);
+  $("dToday").textContent = fmtD(M.latest) + (M.latest !== M.today ? " · čeka se ažuriranje" : "");
+  $("tStart").textContent = fmtN(M.tStart);
+  $("tPrev").textContent = fmtN(M.tPrev);
+  $("tToday").textContent = fmtN(M.tToday);
+  $("cStart").innerHTML = `<span class="m" style="color:var(--muted)">prvi dan u mesecu</span>`;
+  $("cPrev").innerHTML = line(M.tPrev, M.tStart, "vs poč. meseca");
+  $("cToday").innerHTML = line(M.tToday, M.tPrev, "vs juče") + line(M.tToday, M.tStart, "vs početak meseca");
+}
 
-    const hasNote = window.notes[company.name];
+function renderList() {
+  const q = $("search").value.trim().toLowerCase(), acc = $("account").value, s = $("sort").value;
+  const nz = (v, d) => v == null ? d : v;
+  const list = rows
+    .filter(r => (!acc || r.account === acc) && (!q || r.name.toLowerCase().includes(q)))
+    .sort((a, b) => {
+      switch (s) {
+        case "today": return nz(b.today, -1) - nz(a.today, -1);
+        case "chgPrev": return nz(b.dPrev, -1e9) - nz(a.dPrev, -1e9);
+        case "chgPrevNeg": return nz(a.dPrev, 1e9) - nz(b.dPrev, 1e9);
+        case "chgStart": return nz(b.dStart, -1e9) - nz(a.dStart, -1e9);
+        case "chgStartNeg": return nz(a.dStart, 1e9) - nz(b.dStart, 1e9);
+        default: return a.name.localeCompare(b.name, "sr");
+      }
+    });
 
-    const card = document.createElement("div");
-    card.className = "company-card";
-    card.onclick = () => openModal(company.name);
+  $("count").textContent = `Firmi: ${list.length}` + (list.length !== rows.length ? ` od ${rows.length}` : "");
+  if (!list.length) { $("companies").innerHTML = `<div class="empty">Nema firmi za prikaz.</div>`; return; }
 
-    card.innerHTML = `
-      <div class="company-name">
-        ${company.name} ${hasNote ? "📝" : ""}
+  $("companies").innerHTML = list.map(r => `
+    <div class="co" data-name="${esc(r.name)}">
+      <div class="co-head">
+        <div class="co-name">${esc(r.name)} ${notes[r.name] ? "📝" : ""}</div>
+        ${r.account ? `<span class="badge">${esc(r.account)}</span>` : ""}
       </div>
-
-      <div class="company-stats">
-        <div class="box">
-          <span>Start</span>
-          <b>${start}</b>
-        </div>
-
-        <div class="box">
-          <span>Today</span>
-          <b>${today}</b>
-        </div>
-
-        <div class="box">
-          <span>Change</span>
-          <b class="${colorClass}">${percent}%</b>
-        </div>
+      <div class="boxes">
+        <div class="box"><span>Poč. meseca</span><b>${fmtN(r.start)}</b></div>
+        <div class="box"><span>Juče</span><b>${fmtN(r.prev)}</b></div>
+        <div class="box"><span>Danas</span><b>${fmtN(r.today)}</b></div>
       </div>
-    `;
-
-    box.appendChild(card);
-  });
+      <div class="chg">
+        <div><span class="m">vs juče</span><span class="${cls(r.dPrev)}">${fmtDiff(r.dPrev)} (${fmtPct(r.pPrev)})</span></div>
+        <div><span class="m">vs poč. meseca</span><span class="${cls(r.dStart)}">${fmtDiff(r.dStart)} (${fmtPct(r.pStart)})</span></div>
+      </div>
+      ${notes[r.name] ? `<div class="note">${esc(notes[r.name])}</div>` : ""}
+    </div>`).join("");
 }
 
-// ================= MODAL =================
-
-function openModal(companyName){
-  currentCompany = companyName;
-
-  document.getElementById("modalTitle").textContent = companyName + " - Notes";
-  document.getElementById("noteText").value = window.notes[companyName] || "";
-
-  document.getElementById("noteModal").style.display = "flex";
+function renderAccounts() {
+  const cur = $("account").value;
+  const accs = [...new Set(rows.map(r => r.account).filter(Boolean))].sort();
+  $("account").innerHTML = `<option value="">Svi nalozi</option>` + accs.map(a => `<option ${a === cur ? "selected" : ""}>${esc(a)}</option>`).join("");
+  $("account").style.display = accs.length > 1 ? "" : "none";
 }
 
-function closeModal(){
-  document.getElementById("noteModal").style.display = "none";
+function renderAll() { renderStatus(); renderSummary(); renderAccounts(); renderList(); }
+
+// Poslednje i sledeće učitavanje (po srpskom vremenu)
+function renderLoadInfo() {
+  if (!lastLoad) return;
+  $("lastLoad").textContent = `${srClock(new Date(lastLoad))} (${lastType})`;
+  let next;
+  if (M && M.latest === utcToday()) next = `sutra u ${srTime()}`;
+  else if (!pastUpdateTime()) next = `danas u ${srTime()}`;
+  else next = `u ${srClock(new Date(Math.max(lastLoad + REFRESH_MIN * 60000, Date.now() + 60000)))}`;
+  $("nextLoad").textContent = next;
 }
 
-async function saveNote(){
-  const note = document.getElementById("noteText").value;
+function flash(msg) { setStatus("ok", msg); setTimeout(renderStatus, 8000); }
 
-  await fetch(NOTES_API, {
-    method: "POST",
-    body: JSON.stringify({
-      company: currentCompany,
-      note: note
-    })
-  });
-
-  window.notes[currentCompany] = note;
-
-  closeModal();
+/* ===================== AUTOMATSKO OSVEŽAVANJE ===================== */
+// Od 14:10 UTC proverava na svakih 10 min SAMO dok ne stignu današnji podaci, zatim staje do sutra.
+function needsCheck() {
+  const mins = (Date.now() - lastLoad) / 60000;
+  const arrived = M && M.latest === utcToday();
+  return !arrived && pastUpdateTime() && mins >= REFRESH_MIN;
 }
+setInterval(() => {
+  if (M && M.today !== utcToday() && (Date.now() - lastLoad) / 60000 >= 1) loadData(false, "automatski"); // prešao je dan
+  else if (needsCheck()) loadData(true, "automatski");
+  else { renderStatus(); renderLoadInfo(); }
+}, 60 * 1000);
 
-// ================= INIT =================
+// Kad se telefon "probudi" i vrati na stranicu
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && (needsCheck() || (M && M.today !== utcToday()))) loadData(true, "automatski");
+});
 
-async function init(){
-  await loadNotes();
-  await loadData();
-}
+/* ===================== DOGAĐAJI ===================== */
+$("refreshBtn").onclick = () => loadData(true, "ručno");
+$("search").oninput = renderList;
+$("sort").onchange = renderList;
+$("account").onchange = renderList;
+$("companies").onclick = e => { const c = e.target.closest(".co"); if (c) openModal(c.dataset.name); };
+$("saveNote").onclick = saveNote;
+$("closeModal").onclick = closeModal;
+$("noteModal").onclick = e => { if (e.target.id === "noteModal") closeModal(); };
 
-init();
-
+$("srTime").textContent = srTime();
+(async () => { await loadNotes(); await loadData(false, "pri otvaranju"); })();
 </script>
-
 </body>
 </html>
