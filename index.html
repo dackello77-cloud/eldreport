@@ -53,6 +53,19 @@
   @media(min-width:720px){.list{grid-template-columns:1fr 1fr}.stats{grid-template-columns:1fr 1fr 1fr}.stat.today{grid-column:auto}}
   .co{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;cursor:pointer}
   .co:active{transform:scale(.99)}
+  /* Zbir dnevne promene */
+  .dsum{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .dsum .chip{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 8px;text-align:center}
+  .dsum .chip span{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+  .dsum .chip b{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text)}
+  .dsum .chip small{display:block;font-size:13px;font-weight:700;margin-top:2px}
+  .dsum .chip.up{border-color:#166534;background:#052e16}.dsum .chip.up b,.dsum .chip.up small{color:var(--green)}
+  .dsum .chip.down{border-color:#7f1d1d;background:#450a0a}.dsum .chip.down b,.dsum .chip.down small{color:var(--red)}
+  @media(max-width:380px){.dsum{grid-template-columns:1fr 1fr}}
+  .boxes.two{grid-template-columns:repeat(3,1fr)}
+  .box.diff.pos-bg{background:#052e16}.box.diff.neg-bg{background:#450a0a}
+  .co.hl-up{border-color:var(--green);background:#13301f;box-shadow:inset 4px 0 0 var(--green)}
+  .co.hl-down{border-color:var(--red);background:#3a1717;box-shadow:inset 4px 0 0 var(--red)}
   .co-head{display:flex;align-items:flex-start;gap:8px;margin-bottom:10px}
   .co-name{color:var(--yellow);font-weight:700;font-size:16px;flex:1;line-height:1.3;word-break:break-word}
   .badge{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 8px;white-space:nowrap}
@@ -103,6 +116,7 @@
     <input id="search" type="search" placeholder="🔍 Pretraga firme…" autocomplete="off">
     <select id="sort">
       <option value="name">Sortiraj: naziv</option>
+      <option value="daily">Dnevna promena</option>
       <option value="today">Najviše danas</option>
       <option value="chgPrev">Najveći rast vs juče</option>
       <option value="chgPrevNeg">Najveći pad vs juče</option>
@@ -130,7 +144,9 @@
 /* ===================== PODEŠAVANJA ===================== */
 const API_URL   = "https://royal-paper-656b.dackello77.workers.dev";
 const NOTES_API = "https://script.google.com/macros/s/AKfycbynf1lSFfIufxi2DZMdXplNWiBktNfTTmr9dBOMEp0NtWV8tgcgUy-hpXxyCqqBVxh2/exec";
-const UPDATE_UTC  = { h: 14, m: 10 };  // prva provera u 14:10 UTC (= 15:10 po srpskom zimi)
+const UPDATE_SR   = { h: 15, m: 10 };  // prva provera uvek u 15:10 po srpskom vremenu (i leti i zimi); portal se ažurira u 13:00 UTC
+// Firme koje se ne prikazuju i ne ulaze u zbir (poređenje bez obzira na velika/mala slova)
+const HIDDEN_COMPANIES = ["test_vrh", "VRH Training"];
 const REFRESH_MIN = 10;               // zatim na svakih 10 min dok podaci ne stignu
 
 /* ===================== POMOĆNE ===================== */
@@ -145,8 +161,13 @@ const fmtPct = p => p == null ? "—" : (p > 0 ? "+" : "") + p.toFixed(1).replac
 const fmtDiff = d => d == null ? "—" : (d > 0 ? "+" : "") + nf.format(d);
 const fmtN = n => n == null ? "—" : nf.format(n);
 // Vreme ažuriranja po srpskom vremenu (sama računa letnje/zimsko računanje vremena)
-const srTime = () => { const n = new Date(); return new Date(Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate(), UPDATE_UTC.h, UPDATE_UTC.m)).toLocaleTimeString("sr-RS", {hour:"2-digit", minute:"2-digit", timeZone:"Europe/Belgrade"}); };
-const pastUpdateTime = () => { const n = new Date(); return n.getUTCHours() * 60 + n.getUTCMinutes() >= UPDATE_UTC.h * 60 + UPDATE_UTC.m; };
+const srTime = () => String(UPDATE_SR.h).padStart(2, "0") + ":" + String(UPDATE_SR.m).padStart(2, "0");
+const srMinutesNow = () => {
+  const p = new Intl.DateTimeFormat("en-GB", {hour:"2-digit", minute:"2-digit", hourCycle:"h23", timeZone:"Europe/Belgrade"}).formatToParts(new Date());
+  const g = t => Number(p.find(x => x.type === t).value);
+  return g("hour") * 60 + g("minute");
+};
+const pastUpdateTime = () => srMinutesNow() >= UPDATE_SR.h * 60 + UPDATE_SR.m;
 
 let notes = {}, rows = [], M = null, lastLoad = 0, lastType = "", loading = false;
 const srClock = d => d.toLocaleTimeString("sr-RS", {hour:"2-digit", minute:"2-digit", timeZone:"Europe/Belgrade"});
@@ -194,14 +215,19 @@ async function loadData(force, type) {
 
 function compute(data) {
   const today = utcToday();
-  const companies = Object.values(data.data?.companies || {});
+  const hidden = new Set(HIDDEN_COMPANIES.map(n => n.trim().toLowerCase()));
+  const isHidden = c => hidden.has(String(c.name || "").trim().toLowerCase());
+  const allCompanies = Object.values(data.data?.companies || {});
+  const companies = allCompanies.filter(c => !isHidden(c));
+  const hiddenCos = allCompanies.filter(isHidden);
   const all = new Set();
   companies.forEach(c => Object.keys(c.dates || {}).forEach(d => all.add(d)));
   Object.keys(data.data?.total_by_day || {}).forEach(d => all.add(d));
   const tbd = data.data?.total_by_day || {};
   const val = (c, d) => d && c.dates && c.dates[d] ? (c.dates[d].eld_count ?? null) : null;
   // Dan se računa samo ako ima podatke (ten-four unapred vraća današnji dan sa nulama dok ne stigne ažuriranje)
-  const dayTotal = d => tbd[d] != null ? Number(tbd[d]) : companies.reduce((a, c) => a + (val(c, d) || 0), 0);
+  const hiddenSum = d => hiddenCos.reduce((a, c) => a + (val(c, d) || 0), 0);
+  const dayTotal = d => tbd[d] != null ? Number(tbd[d]) - hiddenSum(d) : companies.reduce((a, c) => a + (val(c, d) || 0), 0);
   const avail = [...all].filter(d => d <= today && dayTotal(d) > 0).sort();
 
   // "Danas" = najnoviji dan sa podacima (pre ažuriranja to su jučerašnji podaci)
@@ -222,7 +248,7 @@ function compute(data) {
 
   const total = d => {
     if (!d) return null;
-    if (tbd[d] != null) return Number(tbd[d]);
+    if (tbd[d] != null) return Number(tbd[d]) - hiddenSum(d);
     const v = companies.map(c => val(c, d)).filter(x => x != null);
     return v.length ? v.reduce((a, b) => a + b, 0) : null;
   };
@@ -259,24 +285,70 @@ function renderSummary() {
 function renderList() {
   const q = $("search").value.trim().toLowerCase(), acc = $("account").value, s = $("sort").value;
   const nz = (v, d) => v == null ? d : v;
+  const daily = s === "daily";
   const list = rows
     .filter(r => (!acc || r.account === acc) && (!q || r.name.toLowerCase().includes(q)))
-    .sort((a, b) => {
+    // Dnevna promena: prikazuju se samo firme koje imaju promenu između juče i danas
+    .filter(r => !daily || (r.dPrev != null && r.dPrev !== 0))
+    .sort((a, b) => (() => {
       switch (s) {
+        // zeleni na vrhu (najveći + prvi), zatim crveni (najveći − prvi)
+        case "daily":
+          if ((a.dPrev > 0) !== (b.dPrev > 0)) return a.dPrev > 0 ? -1 : 1;
+          return Math.abs(b.dPrev) - Math.abs(a.dPrev);
         case "today": return nz(b.today, -1) - nz(a.today, -1);
         case "chgPrev": return nz(b.dPrev, -1e9) - nz(a.dPrev, -1e9);
         case "chgPrevNeg": return nz(a.dPrev, 1e9) - nz(b.dPrev, 1e9);
         case "chgStart": return nz(b.dStart, -1e9) - nz(a.dStart, -1e9);
         case "chgStartNeg": return nz(a.dStart, 1e9) - nz(b.dStart, 1e9);
-        default: return a.name.localeCompare(b.name, "sr");
+        default: return 0;
       }
-    });
+    })() || a.name.localeCompare(b.name, "sr"));
+
+  // Istakni firme koje imaju promenu u smeru izabranog sortiranja; ostale ostaju u osnovnoj boji
+  const hl = r => {
+    switch (s) {
+      case "daily": return r.dPrev > 0 ? "hl-up" : "hl-down";
+      case "chgPrev": return r.dPrev > 0 ? "hl-up" : "";
+      case "chgPrevNeg": return r.dPrev < 0 ? "hl-down" : "";
+      case "chgStart": return r.dStart > 0 ? "hl-up" : "";
+      case "chgStartNeg": return r.dStart < 0 ? "hl-down" : "";
+      default: return "";
+    }
+  };
+
+  if (daily) {
+    const up = list.filter(r => r.dPrev > 0), down = list.filter(r => r.dPrev < 0);
+    const sum = list.reduce((a, r) => a + r.dPrev, 0);
+    $("count").innerHTML = `
+      <div class="dsum">
+        <div class="chip"><span>Sa promenom</span><b>${list.length}</b><small style="color:var(--muted);font-weight:400">firmi</small></div>
+        <div class="chip up"><span>Rast ↑</span><b>${up.length}</b><small>${fmtDiff(up.reduce((a, r) => a + r.dPrev, 0))}</small></div>
+        <div class="chip down"><span>Pad ↓</span><b>${down.length}</b><small>${fmtDiff(down.reduce((a, r) => a + r.dPrev, 0))}</small></div>
+        <div class="chip ${sum > 0 ? "up" : sum < 0 ? "down" : ""}"><span>Ukupno</span><b>${fmtDiff(sum)}</b><small style="color:var(--muted);font-weight:400">ELD</small></div>
+      </div>`;
+    if (!list.length) { $("companies").innerHTML = `<div class="empty">Nema promena između juče i danas.</div>`; return; }
+    $("companies").innerHTML = list.map(r => `
+    <div class="co ${hl(r)}" data-name="${esc(r.name)}">
+      <div class="co-head">
+        <div class="co-name">${esc(r.name)} ${notes[r.name] ? "📝" : ""}</div>
+        ${r.account ? `<span class="badge">${esc(r.account)}</span>` : ""}
+      </div>
+      <div class="boxes two">
+        <div class="box"><span>Juče</span><b>${fmtN(r.prev)}</b></div>
+        <div class="box"><span>Danas</span><b>${fmtN(r.today)}</b></div>
+        <div class="box diff ${r.dPrev > 0 ? "pos-bg" : "neg-bg"}"><span>Razlika</span><b class="${cls(r.dPrev)}">${fmtDiff(r.dPrev)}</b></div>
+      </div>
+      ${notes[r.name] ? `<div class="note">${esc(notes[r.name])}</div>` : ""}
+    </div>`).join("");
+    return;
+  }
 
   $("count").textContent = `Firmi: ${list.length}` + (list.length !== rows.length ? ` od ${rows.length}` : "");
   if (!list.length) { $("companies").innerHTML = `<div class="empty">Nema firmi za prikaz.</div>`; return; }
 
   $("companies").innerHTML = list.map(r => `
-    <div class="co" data-name="${esc(r.name)}">
+    <div class="co ${hl(r)}" data-name="${esc(r.name)}">
       <div class="co-head">
         <div class="co-name">${esc(r.name)} ${notes[r.name] ? "📝" : ""}</div>
         ${r.account ? `<span class="badge">${esc(r.account)}</span>` : ""}
@@ -317,7 +389,7 @@ function renderLoadInfo() {
 function flash(msg) { setStatus("ok", msg); setTimeout(renderStatus, 8000); }
 
 /* ===================== AUTOMATSKO OSVEŽAVANJE ===================== */
-// Od 14:10 UTC proverava na svakih 10 min SAMO dok ne stignu današnji podaci, zatim staje do sutra.
+// Od 15:10 po srpskom vremenu proverava na svakih 10 min SAMO dok ne stignu današnji podaci, zatim staje do sutra.
 function needsCheck() {
   const mins = (Date.now() - lastLoad) / 60000;
   const arrived = M && M.latest === utcToday();
